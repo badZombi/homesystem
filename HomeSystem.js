@@ -5,8 +5,9 @@
 var HomeSystem = {
 	name: 		'HomeSystem',
 	author: 	'DreTaX',
-	version: 	'2.0.0',
+	version: 	'2.0.0'
 };
+
 var BZHJ = {
 	name: 		'Home Jobs',
 	author: 	'BadZombi',
@@ -54,8 +55,8 @@ var BZHJ = {
 }
 
 function On_PluginInit() { 
-	Util.ConsoleLog(BZHJ.name + " v" + BZHJ.version + " loaded.", true);
-	Util.ConsoleLog(HomeSystem.name + " v" + HomeSystem.version + " loaded.", true);
+	Util.ConsoleLog(BZHJ.name + " v" + BZHJ.version + " by " + BZHJ.author + " loaded.", true);
+	Util.ConsoleLog(HomeSystem.name + " v" + HomeSystem.version + " by " + HomeSystem.author  + " loaded.", true);
 }
 
 function JobTimerCallback(){
@@ -117,6 +118,7 @@ function JobTimerCallback(){
 						var _fromPlayer = FindPlayer(params[0]);
 						if (_fromPlayer != null) {
 							_fromPlayer.TeleportTo(params[1], params[2], params[3]);
+							_fromPlayer.Notice("You have been teleported home.");
 							//BZHJ.addJob( 'mytestt', checkn, jobData.params );
 						}
 					break;
