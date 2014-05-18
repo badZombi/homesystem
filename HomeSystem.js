@@ -2,7 +2,11 @@
  *		Homejobs plugin addon written and integrated by BadZombi for HomeSystem V1.9.3 (DreTaX) 
  *  	-- 
  */
-
+var HomeSystem = {
+	name: 		'HomeSystem',
+	author: 	'DreTaX',
+	version: 	'2.0.0',
+};
 var BZHJ = {
 	name: 		'Home Jobs',
 	author: 	'BadZombi',
@@ -41,62 +45,67 @@ var BZHJ = {
 		return conf.GetSetting(section, name);
 	},
 	addJob: function(callback, xtime, params){
+		//Server.Broadcast('AddJobs called');
+		//Server.Broadcast(params);
 		var jobData = {};
 			jobData.callback = String(callback);
 			jobData.params = String(params);
-
+		//Server.Broadcast(iJSON.stringify(jobData));
+		//Server.Broadcast('xtime: '+xtime);
 		var epoch = Plugin.GetTimestamp();
+		//Server.Broadcast('epoch: '+epoch);
 		var exectime = parseInt(epoch) + parseInt(xtime);
+		//Server.Broadcast('exectime: '+exectime);
 		DataStore.Add(this.DStable, exectime, iJSON.stringify(jobData));
+		//Server.Broadcast('mark 2');
 		this.startTimer();
 	},
 	killJob: function(job){
 		Datastore.Remove(this.DStable, job);
 	},
 	startTimer: function(){
-		if(!Plugin.GetTimer("JobTimer")){
-			Plugin.CreateTimer("JobTimer", this.confSetting("run_timer") * 1000).Start();
+		//Server.Broadcast('mark 3');
+		try{
+			
+			var gfjfhg = Data.GetConfigValue("HomeSystem", "Settings", "run_timer") * 1000;
+			//Server.Broadcast("timer: "+gfjfhg);
+			if(!Plugin.GetTimer("JobTimer")){
+				Plugin.CreateTimer("JobTimer", gfjfhg).Start();
+			}
+		} catch(err){
+			//Server.Broadcast(err.message);
 		}
 	},
 	stopTimer: function(P) {
 		Plugin.KillTimer("JobTimer");
 	},
 	clearTimers: function(P){
-		P.MessageFrom(ExTime.confSetting("chatname"), "Erasing all example timers.");
+		P.MessageFrom('meh', "Erasing all example timers.");
 		Datastore.Flush(this.DStable);
 	}
 }
 
 function On_PluginInit() { 
-
-	if ( !Plugin.IniExists( 'BZjobsConf' ) ) {
-
-		var Config = {};
-			Config['run_timer'] = 2;
-
-
-		var iniData = {};
-			iniData["Config"] = Config;
-
-		var conf = BZHJ.createConfig(iniData, 'BZjobsConf', BZHJ.name);
-
-	}
-
 	Util.ConsoleLog(BZHJ.name + " v" + BZHJ.version + " loaded.", true);
+	Util.ConsoleLog(HomeSystem.name + " v" + HomeSystem.version + " loaded.", true);
 }
 
 function JobTimerCallback(){
+	//Server.Broadcast('JTC');
 	var epoch = Plugin.GetTimestamp();
 	//var exp = parseInt(BZHJ.confSetting("expiration") - BZHJ.confSetting("execute_delay"))
 	if(Datastore.Count(BZHJ.DStable) >= 1){
 		var pending = Datastore.Keys(BZHJ.DStable);
 		for (var p in pending){
-
-			var x = parseInt(epoch - p);
-			if(x >= 0){
+			//Server.Broadcast("checking "+p+" : " + epoch);
+			
+			if(epoch >= parseInt(p)){
+				//Server.Broadcast("executing "+p);
 				// execute job
 				var jobData = Datastore.Get(BZHJ.DStable, p);
-				jobxData = iJSON.parse(jobData);
+					//Server.Broadcast("jobData: "+jobData);
+				var jobxData = iJSON.parse(jobData);
+					//Server.Broadcast("params: "+jobData.params);
 				var params = iJSON.parse(jobxData.params);
 				switch(jobxData.callback){
 					case "jointpdelay":
@@ -104,7 +113,7 @@ function JobTimerCallback(){
 						var joinplayer = FindPlayer(params[0]);
 						if (joinplayer != null) {
 							joinplayer.TeleportTo(params[1], params[2], params[3]);
-							BZHJ.addJob( 'jointp', checkn, jobData );
+							BZHJ.addJob( 'jointp', checkn, jobData.params );
 						}
 					break;
 
@@ -136,11 +145,12 @@ function JobTimerCallback(){
 					break;
 
 					case "delay":
+						//Server.Broadcast("hit");
 						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
 						var _fromPlayer = FindPlayer(params[0]);
 						if (_fromPlayer != null) {
 							_fromPlayer.TeleportTo(params[1], params[2], params[3]);
-							BZHJ.addJob( 'mytestt', checkn, jobData );
+							//BZHJ.addJob( 'mytestt', checkn, jobData.params );
 						}
 					break;
 
@@ -153,7 +163,7 @@ function JobTimerCallback(){
 							rplayer.Message("You have been teleported to a random location!");
 							rplayer.Message("Type /setdefaulthome HOMENAME");
 							rplayer.Message("To spawn at your home!");
-							BZHJ.addJob( 'randomtp', checkn, jobData );
+							BZHJ.addJob( 'randomtp', checkn, jobData.params );
 						}
 					break;
 
@@ -205,7 +215,7 @@ function JobTimerCallback(){
 								if (getdfhome != null) {
 									var home = HomeOf(joinp, getdfhome);
 									// first test of jobs:
-									var jobParams = {};
+									var jobParams = [];
 										jobParams.push(String(joinp.SteamID));
 										jobParams.push(String(home[0]));
 										jobParams.push(String(home[1]));
@@ -220,7 +230,7 @@ function JobTimerCallback(){
 									c = c.replace(")", "");
 									var tp = c.split(",");
 									
-									var jobParams = {};
+									var jobParams = [];
 										jobParams.push(String(joinp.SteamID));
 										jobParams.push(String(tp[0]));
 										jobParams.push(String(tp[1]));
@@ -235,6 +245,8 @@ function JobTimerCallback(){
 				}
 				
 				Datastore.Remove(BZHJ.DStable, p)
+			} else {
+				//Server.Broadcast('not yet...');
 			}
 				
 		}
@@ -252,6 +264,9 @@ function JobTimerCallback(){
 
 function On_Command(Player, cmd, args) {
 	switch(cmd) {
+		case "cleartimers":
+			BZHJ.clearTimers(Player);
+		break;
 		case "home":
 			if (args.Length == 0) {
 				Player.Message("---HomeSystem---");
@@ -272,57 +287,62 @@ function On_Command(Player, cmd, args) {
 					Player.Message("You don't have a home called: " + home);	
 				}
 				else {
-					var cooldown = Data.GetConfigValue("HomeSystem", "Settings", "Cooldown");
-					var time = Data.GetTableValue("home_cooldown", Player.SteamID);
-					var tpdelay = Data.GetConfigValue("HomeSystem", "Settings", "tpdelay");
-					var calc = System.Environment.TickCount - time;
-					if (time == undefined || time == null) {
-						if (calc < 0 || isNaN(calc)) {
-							time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
-							Player.Message("Your time went negative! Try again!");
-							return;
+					//try{
+						var cooldown = Data.GetConfigValue("HomeSystem", "Settings", "Cooldown");
+						var time = Data.GetTableValue("home_cooldown", Player.SteamID);
+						var tpdelay = Data.GetConfigValue("HomeSystem", "Settings", "tpdelay");
+						var calc = System.Environment.TickCount - time;
+						if (time == undefined || time == null) {
+							if (calc < 0 || isNaN(calc)) {
+								time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
+								Player.Message("Your time went negative! Try again!");
+								return;
+							}
+						} else {
+							if (calc < 0 || isNaN(calc)) {
+								time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
+								Player.Message("Your time went negative! Try again!");
+								return;
+							}
 						}
-					}
-					else {
-						if (calc < 0 || isNaN(calc)) {
-							time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
-							Player.Message("Your time went negative! Try again!");
-							return;
-						}
-					}
-					if (calc >= cooldown) {
-						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
 
-						var jobParams = {};
-							jobParams.push(String(Player.SteamID));
-							jobParams.push(String(check[0]));
-							jobParams.push(String(check[1]));
-							jobParams.push(String(check[2]));
+						if (calc >= cooldown) {
+							//Player.Message("c0: "+check[0]);
+							var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+							//Player.Message("c: "+checkn);
+							var jobParams = [];
+								jobParams.push(String(Player.SteamID));
+								jobParams.push(String(check[0]));
+								jobParams.push(String(check[1]));
+								jobParams.push(String(check[2]));
+								
+							if (tpdelay == 0) {
+								Player.TeleportTo(check[0], check[1], check[2]);
+								Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
+								Player.Message("---HomeSystem---");
+								Player.Message("Teleported to home!");
+								//BZHJ.addJob( 'mytestt', checkn, iJSON.stringify(jobParams) );
+							}
+							else {
+								//Player.Message(3);
+								Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
+								BZHJ.addJob( 'delay', tpdelay, iJSON.stringify(jobParams) );
 
-						if (tpdelay == 0) {
-							Player.TeleportTo(check[0], check[1], check[2]);
-							Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
-							Player.Message("---HomeSystem---");
-							Player.Message("Teleported to home!");
-							BZHJ.addJob( 'mytestt', checkn, iJSON.stringify(jobParams) );
+								Player.Message("Teleporting you to home in: " + tpdelay + " seconds");
+							}
+						} else {
+							Player.Notice("You have to wait before teleporting again!");
+							var next = calc / 1000;
+							var next2 = next / 60;
+							var def = cooldown / 1000;
+							var def2 = def / 60;
+							var done = Number(next2).toFixed(2); 
+							var done2 = Number(def2).toFixed(2); 
+							Player.Message("Time: " + done + "/" + done2);
 						}
-						else {
-							Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
-							BZHJ.addJob( 'delay', tpdelay, iJSON.stringify(jobParams) );
-							Player.Message("Teleporting you to home in: " + tpdelay + " seconds");
-						}
-					}
-					else
-					{
-						Player.Notice("You have to wait before teleporting again!");
-						var next = calc / 1000;
-						var next2 = next / 60;
-						var def = cooldown / 1000;
-						var def2 = def / 60;
-						var done = Number(next2).toFixed(2); 
-						var done2 = Number(def2).toFixed(2); 
-						Player.Message("Time: " + done + "/" + done2);
-					}
+					//} catch(err){
+					//	Player.Message(err.message+" : "+err.description);
+					//}
 				}
 			}
 		break;
@@ -668,7 +688,7 @@ function On_PlayerSpawned(Player, SpawnEvent) {
 				Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
 				var home = HomeOf(Player, check);
 
-				var jobParams = {};
+				var jobParams = [];
 					jobParams.push(String(Player.SteamID));
 					jobParams.push(String(home[0]));
 					jobParams.push(String(home[1]));
@@ -683,7 +703,7 @@ function On_PlayerSpawned(Player, SpawnEvent) {
 }
 
 function On_PlayerConnected(Player) {
-	var jobParams = {};
+	var jobParams = [];
 		jobParams.push(String(Player.SteamID));
 	// Had to set this to 4 since my setup doesnt work with mseconds but rather seconds from epoch
 	BZHJ.addJob( 'ByPassRoof', 4, iJSON.stringify(jobParams) );
