@@ -238,7 +238,7 @@ function JobTimerCallback(){
 			}
 				
 		}
-		Server.BroadcastFrom(BZHJ.confSetting("chatname"), '-----------------------------------');
+		
 	} else {
 		BZHJ.stopTimer();
 	}
