@@ -108,7 +108,7 @@ function JobTimerCallback(){
 						}
 					break;
 
-					case "jointp";
+					case "jointp":
 						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
 						var joinplayer = FindPlayer(params[0]);
 						if (joinplayer != null) {
