@@ -12,38 +12,6 @@ var BZHJ = {
 	author: 	'BadZombi',
 	version: 	'0.1.0',
 	DStable: 	'BZjobs',
-	// These config functions (createConfig, loadConfig and confSetting) are usually in my core...
-	createConfig: function(data, filename, pluginname){
-		Util.ConsoleLog("Config does not exist... creating "+ filename +".ini for " + pluginname, true);
-		Plugin.CreateIni(filename);
-		var newConf = Plugin.GetIni(filename);
-		for (var x in data) {
-			var section_name = x;
-			var section_data = data[x];
-
-			if(typeof(section_data) == "object"){
-				for (var d in section_data) {
-					var itemName = d;
-					var itemValue = section_data[d];
-					newConf.AddSetting(section_name, itemName, itemValue);
-					Util.ConsoleLog("  --  Adding \"" + itemName + "\" = \"" + itemValue + "\" to " + section_name + " section...", true);
-				}
-			} 
-		}
-		newConf.Save();
-		return newConf;
-	},
-	loadConfig: function(file){
-		if(file == undefined){ file = "Config"; }
-		var readConf = Plugin.GetIni(file);
-		return readConf;
-	},
-	confSetting: function(name, section, file) {
-		if(section == undefined){ section = "Config"; }
-		if(file == undefined){ file = "Config"; }
-		var conf = this.loadConfig(file);
-		return conf.GetSetting(section, name);
-	},
 	addJob: function(callback, xtime, params){
 		//Server.Broadcast('AddJobs called');
 		//Server.Broadcast(params);
@@ -93,7 +61,6 @@ function On_PluginInit() {
 function JobTimerCallback(){
 	//Server.Broadcast('JTC');
 	var epoch = Plugin.GetTimestamp();
-	//var exp = parseInt(BZHJ.confSetting("expiration") - BZHJ.confSetting("execute_delay"))
 	if(Datastore.Count(BZHJ.DStable) >= 1){
 		var pending = Datastore.Keys(BZHJ.DStable);
 		for (var p in pending){
