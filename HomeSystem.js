@@ -1,4 +1,251 @@
 /**
+ *		Homejobs plugin addon written and integrated by BadZombi for HomeSystem V1.9.3 (DreTaX) 
+ *  	-- 
+ */
+
+var BZHJ = {
+	name: 		'Home Jobs',
+	author: 	'BadZombi',
+	version: 	'0.1.0',
+	DStable: 	'BZjobs',
+	// These config functions (createConfig, loadConfig and confSetting) are usually in my core...
+	createConfig: function(data, filename, pluginname){
+		Util.ConsoleLog("Config does not exist... creating "+ filename +".ini for " + pluginname, true);
+		Plugin.CreateIni(filename);
+		var newConf = Plugin.GetIni(filename);
+		for (var x in data) {
+			var section_name = x;
+			var section_data = data[x];
+
+			if(typeof(section_data) == "object"){
+				for (var d in section_data) {
+					var itemName = d;
+					var itemValue = section_data[d];
+					newConf.AddSetting(section_name, itemName, itemValue);
+					Util.ConsoleLog("  --  Adding \"" + itemName + "\" = \"" + itemValue + "\" to " + section_name + " section...", true);
+				}
+			} 
+		}
+		newConf.Save();
+		return newConf;
+	},
+	loadConfig: function(file){
+		if(file == undefined){ file = "Config"; }
+		var readConf = Plugin.GetIni(file);
+		return readConf;
+	},
+	confSetting: function(name, section, file) {
+		if(section == undefined){ section = "Config"; }
+		if(file == undefined){ file = "Config"; }
+		var conf = this.loadConfig(file);
+		return conf.GetSetting(section, name);
+	},
+	addJob: function(callback, xtime, params){
+		var jobData = {};
+			jobData.callback = String(callback);
+			jobData.params = String(params);
+
+		var epoch = Plugin.GetTimestamp();
+		var exectime = parseInt(epoch) + parseInt(xtime);
+		DataStore.Add(this.DStable, exectime, iJSON.stringify(jobData));
+		this.startTimer();
+	},
+	killJob: function(job){
+		Datastore.Remove(this.DStable, job);
+	},
+	startTimer: function(){
+		if(!Plugin.GetTimer("JobTimer")){
+			Plugin.CreateTimer("JobTimer", this.confSetting("run_timer") * 1000).Start();
+		}
+	},
+	stopTimer: function(P) {
+		Plugin.KillTimer("JobTimer");
+	},
+	clearTimers: function(P){
+		P.MessageFrom(ExTime.confSetting("chatname"), "Erasing all example timers.");
+		Datastore.Flush(this.DStable);
+	}
+}
+
+function On_PluginInit() { 
+
+	if ( !Plugin.IniExists( 'BZjobsConf' ) ) {
+
+		var Config = {};
+			Config['run_timer'] = 2;
+
+
+		var iniData = {};
+			iniData["Config"] = Config;
+
+		var conf = BZHJ.createConfig(iniData, 'BZjobsConf', BZHJ.name);
+
+	}
+
+	Util.ConsoleLog(BZHJ.name + " v" + BZHJ.version + " loaded.", true);
+}
+
+function JobTimerCallback(){
+	var epoch = Plugin.GetTimestamp();
+	//var exp = parseInt(BZHJ.confSetting("expiration") - BZHJ.confSetting("execute_delay"))
+	if(Datastore.Count(BZHJ.DStable) >= 1){
+		var pending = Datastore.Keys(BZHJ.DStable);
+		for (var p in pending){
+
+			var x = parseInt(epoch - p);
+			if(x >= 0){
+				// execute job
+				var jobData = Datastore.Get(BZHJ.DStable, p);
+				jobxData = iJSON.parse(jobData);
+				var params = iJSON.parse(jobxData.params);
+				switch(jobxData.callback){
+					case "jointpdelay":
+						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+						var joinplayer = FindPlayer(params[0]);
+						if (joinplayer != null) {
+							joinplayer.TeleportTo(params[1], params[2], params[3]);
+							BZHJ.addJob( 'jointp', checkn, jobData );
+						}
+					break;
+
+					case "jointp";
+						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+						var joinplayer = FindPlayer(params[0]);
+						if (joinplayer != null) {
+							joinplayer.TeleportTo(params[1], params[2], params[3]);
+							joinplayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
+						}
+					break;
+
+					case "mytestt":
+						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+						var _fromPlayer = FindPlayer(params[0]);
+						if (_fromPlayer != null) {
+							_fromPlayer.TeleportTo(params[1], params[2], params[3]);
+							_fromPlayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
+						}
+					break;
+
+					case "randomtp":
+						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+						var rplayer = FindPlayer(params[0]);
+						if (rplayer != null) {
+							rplayer.TeleportTo(params[1], params[2], params[3]);
+							rplayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
+						}
+					break;
+
+					case "delay":
+						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+						var _fromPlayer = FindPlayer(params[0]);
+						if (_fromPlayer != null) {
+							_fromPlayer.TeleportTo(params[1], params[2], params[3]);
+							BZHJ.addJob( 'mytestt', checkn, jobData );
+						}
+					break;
+
+					case "randomtpdelay":
+						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+						var rplayer = FindPlayer(params[0]);
+						if (rplayer != null) {
+							rplayer.TeleportTo(params[1], params[2], params[3]);
+							rplayer.Message("---HomeSystem---");
+							rplayer.Message("You have been teleported to a random location!");
+							rplayer.Message("Type /setdefaulthome HOMENAME");
+							rplayer.Message("To spawn at your home!");
+							BZHJ.addJob( 'randomtp', checkn, jobData );
+						}
+					break;
+
+					case "spawndelay":
+						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+						var spawntpplayer = FindPlayer(params[0]);
+						if (spawntpplayer != null) {
+							spawntpplayer.TeleportTo(params[1], params[2], params[3]);
+							spawntpplayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
+						}
+					break;
+
+					case "ByPassRoof":
+						var antiroof = Data.GetConfigValue("HomeSystem", "Settings", "antiroofdizzy");
+						var joinp = FindPlayer(params[0]);
+						if (antiroof == 1 && joinp != null) {
+							var cooldown = Data.GetConfigValue("HomeSystem", "Settings", "rejoincd");
+							var time = Data.GetTableValue("home_joincooldown", joinp.SteamID);
+							var calc = System.Environment.TickCount - time;
+							if (time == undefined || time == null) {
+								if (calc < 0 || isNaN(calc)) {
+									time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
+								}
+							}
+							else {
+								if (calc < 0 || isNaN(calc)) {
+									time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
+								}
+							}
+							if (System.Environment.TickCount <= time + cooldown * 1000){
+								var calc2 = cooldown * 1000;
+								var calc3 = (calc2 - calc) / 1000;
+								var done = Number(calc3).toFixed(2);
+								joinp.Message("There is a " + cooldown + " cooldown at join. You can't join till: " + done + " more seconds.");
+								joinp.Disconnect();
+								// I THINK this will work. removing the current job rather than killing the timer.
+								// Plugin.KillTimer("ByPassRoof");
+								BZHJ.killJob(x);
+							}
+							if (System.Environment.TickCount > time + cooldown * 1000 || time == null) {
+								var randomloc = Data.GetConfigValue("HomeSystem", "Settings", "randomlocnumber");
+								Data.AddTableValue("home_joincooldown", joinp.SteamID, null);
+								var random = Math.floor((Math.random() * randomloc) + 1);
+								var ini = Homes();
+								var getdfhome = ini.GetSetting("DefaultHome", params[0]);
+								var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
+								var tpdelay = Data.GetConfigValue("HomeSystem", "Settings", "jointpdelay");
+								
+								if (getdfhome != null) {
+									var home = HomeOf(joinp, getdfhome);
+									// first test of jobs:
+									var jobParams = {};
+										jobParams.push(String(joinp.SteamID));
+										jobParams.push(String(home[0]));
+										jobParams.push(String(home[1]));
+										jobParams.push(String(home[2]));
+									
+									BZHJ.addJob( 'jointpdelay', tpdelay, iJSON.stringify(jobParams) );
+								}
+								else {
+									var ini2 = DefaultLoc();
+									var loc = ini2.GetSetting("DefaultLoc", random);
+									var c = loc.replace("(", "");
+									c = c.replace(")", "");
+									var tp = c.split(",");
+									
+									var jobParams = {};
+										jobParams.push(String(joinp.SteamID));
+										jobParams.push(String(tp[0]));
+										jobParams.push(String(tp[1]));
+										jobParams.push(String(tp[2]));
+
+									BZHJ.addJob( 'randomtpdelay', tpdelay, iJSON.stringify(jobParams) );
+								}
+							}
+						}
+					break;
+
+				}
+				
+				Datastore.Remove(BZHJ.DStable, p)
+			}
+				
+		}
+		Server.BroadcastFrom(BZHJ.confSetting("chatname"), '-----------------------------------');
+	} else {
+		BZHJ.stopTimer();
+	}
+
+}
+
+/**
  * Created by DreTaX on 2014.04.18.. V1.9.3
  * 
  */
@@ -45,21 +292,23 @@ function On_Command(Player, cmd, args) {
 					}
 					if (calc >= cooldown) {
 						var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-						var params = new ParamsList();
-						params.Add(Player.SteamID);
-						params.Add(check[0]);
-						params.Add(check[1]);
-						params.Add(check[2]);
+
+						var jobParams = {};
+							jobParams.push(String(Player.SteamID));
+							jobParams.push(String(check[0]));
+							jobParams.push(String(check[1]));
+							jobParams.push(String(check[2]));
+
 						if (tpdelay == 0) {
 							Player.TeleportTo(check[0], check[1], check[2]);
 							Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
 							Player.Message("---HomeSystem---");
 							Player.Message("Teleported to home!");
-							Plugin.CreateTimer("mytestt", 1000 * checkn, params).Start();
+							BZHJ.addJob( 'mytestt', checkn, iJSON.stringify(jobParams) );
 						}
 						else {
 							Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
-							Plugin.CreateTimer("delay", 1000 * tpdelay, params).Start();
+							BZHJ.addJob( 'delay', tpdelay, iJSON.stringify(jobParams) );
 							Player.Message("Teleporting you to home in: " + tpdelay + " seconds");
 						}
 					}
@@ -302,80 +551,6 @@ function On_Command(Player, cmd, args) {
 	}
 }
 
-function mytesttCallback(params) {
-	var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-	var _fromPlayer = FindPlayer(params.Get(0));
-	if (_fromPlayer != null) {
-		_fromPlayer.TeleportTo(params.Get(1), params.Get(2), params.Get(3));
-		_fromPlayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
-	}
-	Plugin.KillTimer("mytestt");
-}
-
-function jointpCallback(params) {
-	var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-	var joinplayer = FindPlayer(params.Get(0));
-	if (joinplayer != null) {
-		joinplayer.TeleportTo(params.Get(1), params.Get(2), params.Get(3));
-		joinplayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
-	}
-	Plugin.KillTimer("jointp");
-}
-
-function randomtpCallback(params) {
-	var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-	var rplayer = FindPlayer(params.Get(0));
-	if (rplayer != null) {
-		rplayer.TeleportTo(params.Get(1), params.Get(2), params.Get(3));
-		rplayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
-	}
-	Plugin.KillTimer("randomtp");
-}
-
-function delayCallback(params) {
-	var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-	var _fromPlayer = FindPlayer(params.Get(0));
-	if (_fromPlayer != null) {
-		_fromPlayer.TeleportTo(params.Get(1), params.Get(2), params.Get(3));
-		Plugin.CreateTimer("mytestt", 1000 * checkn, params).Start();
-	}
-	Plugin.KillTimer("delay");
-}
-
-function jointpdelayCallback(params) {
-	var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-	var joinplayer = FindPlayer(params.Get(0));
-	if (joinplayer != null) {
-		joinplayer.TeleportTo(params.Get(1), params.Get(2), params.Get(3));
-		Plugin.CreateTimer("jointp", 1000 * checkn, params).Start();
-	}
-	Plugin.KillTimer("jointpdelay");
-}
-
-function randomtpdelayCallback(params) {
-	var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-	var rplayer = FindPlayer(params.Get(0));
-	if (rplayer != null) {
-		rplayer.TeleportTo(params.Get(1), params.Get(2), params.Get(3));
-		rplayer.Message("---HomeSystem---");
-		rplayer.Message("You have been teleported to a random location!");
-		rplayer.Message("Type /setdefaulthome HOMENAME");
-		rplayer.Message("To spawn at your home!");
-		Plugin.CreateTimer("randomtp", 1000 * checkn, params).Start();
-	}
-	Plugin.KillTimer("randomtpdelay");
-}
-
-function spawndelayCallback(params) {
-	var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-	var spawntpplayer = FindPlayer(params.Get(0));
-	if (spawntpplayer != null) {
-		spawntpplayer.TeleportTo(params.Get(1), params.Get(2), params.Get(3));
-		spawntpplayer.Message("You have been teleported here again for safety reasons in: " + checkn + " secs");
-	}
-	Plugin.KillTimer("spawndelay");
-}
-
 function Homes(){
 	if(!Plugin.IniExists("Homes")) {
 		var homes = Plugin.CreateIni("Homes");
@@ -492,82 +667,26 @@ function On_PlayerSpawned(Player, SpawnEvent) {
 			if (check != null) {
 				Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
 				var home = HomeOf(Player, check);
-				var params = new ParamsList();
-				params.Add(Player.SteamID);
-				params.Add(home[0]);
-				params.Add(home[1]);
-				params.Add(home[2]);
+
+				var jobParams = {};
+					jobParams.push(String(Player.SteamID));
+					jobParams.push(String(home[0]));
+					jobParams.push(String(home[1]));
+					jobParams.push(String(home[2]));
+
 				Player.TeleportTo(home[0], home[1], home[2]);
 				Player.Message("Spawned at home!");
-				Plugin.CreateTimer("spawndelay", 1000 * checkn, params).Start();
+				BZHJ.addJob( 'spawndelay', checkn, iJSON.stringify(jobParams) );
 			}
 		}
 	}
 }
 
 function On_PlayerConnected(Player) {
-	var params = new ParamsList();
-	params.Add(Player.SteamID);
-	Plugin.CreateTimer("ByPassRoof", 3400, params).Start();
-}
-
-function ByPassRoofCallback(params) {
-	var antiroof = Data.GetConfigValue("HomeSystem", "Settings", "antiroofdizzy");
-	var joinp = FindPlayer(params.Get(0));
-	if (antiroof == 1 && joinp != null) {
-		var cooldown = Data.GetConfigValue("HomeSystem", "Settings", "rejoincd");
-		var time = Data.GetTableValue("home_joincooldown", joinp.SteamID);
-		var calc = System.Environment.TickCount - time;
-		if (time == undefined || time == null) {
-			if (calc < 0 || isNaN(calc)) {
-				time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
-			}
-		}
-		else {
-			if (calc < 0 || isNaN(calc)) {
-				time = Data.AddTableValue("home_cooldown", Player.SteamID, System.Environment.TickCount);
-			}
-		}
-		if (System.Environment.TickCount <= time + cooldown * 1000){
-			var calc2 = cooldown * 1000;
-			var calc3 = (calc2 - calc) / 1000;
-			var done = Number(calc3).toFixed(2);
-			joinp.Message("There is a " + cooldown + " cooldown at join. You can't join till: " + done + " more seconds.");
-			joinp.Disconnect();
-			Plugin.KillTimer("ByPassRoof");
-		}
-		if (System.Environment.TickCount > time + cooldown * 1000 || time == null) {
-			var randomloc = Data.GetConfigValue("HomeSystem", "Settings", "randomlocnumber");
-			Data.AddTableValue("home_joincooldown", joinp.SteamID, null);
-			var random = Math.floor((Math.random() * randomloc) + 1);
-			var ini = Homes();
-			var getdfhome = ini.GetSetting("DefaultHome", params.Get(0));
-			var checkn = Data.GetConfigValue("HomeSystem", "Settings", "safetpcheck");
-			var tpdelay = Data.GetConfigValue("HomeSystem", "Settings", "jointpdelay");
-			var params2 = new ParamsList();
-			if (getdfhome != null) {
-				var home = HomeOf(joinp, getdfhome);
-				params2.Add(joinp.SteamID);
-				params2.Add(home[0]);
-				params2.Add(home[1]);
-				params2.Add(home[2]);
-				Plugin.CreateTimer("jointpdelay", 1000 * tpdelay, params2).Start();
-			}
-			else {
-				var ini2 = DefaultLoc();
-				var loc = ini2.GetSetting("DefaultLoc", random);
-				var c = loc.replace("(", "");
-				c = c.replace(")", "");
-				var tp = c.split(",");
-				params2.Add(joinp.SteamID);
-				params2.Add(tp[0]);
-				params2.Add(tp[1]);
-				params2.Add(tp[2]);
-				Plugin.CreateTimer("randomtpdelay", 1000 * tpdelay, params2).Start();
-			}
-		}
-	}
-	Plugin.KillTimer("ByPassRoof");
+	var jobParams = {};
+		jobParams.push(String(Player.SteamID));
+	// Had to set this to 4 since my setup doesnt work with mseconds but rather seconds from epoch
+	BZHJ.addJob( 'ByPassRoof', 4, iJSON.stringify(jobParams) );
 }
 
 function On_PlayerDisconnected(Player) {
@@ -582,3 +701,105 @@ function On_PlayerDisconnected(Player) {
 		}
 	}
 }
+
+// In Rust We Trust JSON serializer adapted (by mikec) from json2.js 2014-02-04 Public Domain.
+// Most recent version from https://github.com/douglascrockford/JSON-js/blob/master/json2.js
+var iJSON = {};
+(function () {
+	'use strict';
+	function f(n) {
+		return n < 10 ? '0' + n : n;
+	}
+	var cx,	escapable, gap, indent,	meta, rep;
+	function quote(string) {
+		escapable.lastIndex = 0;
+		return escapable.test(string) ? '"' + string.replace(escapable, function (a) {
+			var c = meta[a];
+			return typeof c === 'string' ? c : '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+		}) + '"' : '"' + string + '"';
+	}
+	function str(key, holder) {
+		var i, k, v, length, mind = gap, partial, value = holder[key];
+		if (value && typeof value === 'object' && typeof value.toJSON === 'function') {
+			value = value.toJSON(key);
+		}
+		switch (typeof value) {
+		case 'string':
+			return quote(value);
+		case 'number':
+			return isFinite(value) ? String(value) : 'null';
+		case 'boolean':
+		case 'null':
+			return String(value);
+		case 'object':
+			if (!value) { return 'null'; }
+			gap += indent;
+			partial = [];
+			if (Object.prototype.toString.apply(value) === '[object Array]') {
+				length = value.length;
+				for (i = 0; i < length; i += 1) {
+					partial[i] = str(i, value) || 'null';
+				}
+				v = partial.length === 0 ? '[]' : gap ? '[ ' + gap + partial.join(', ' + gap) + ' ' + mind + ']' : '[' + partial.join(',') + ']';
+				// v = partial.length === 0 ? '[]' : gap ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' : '[' + partial.join(',') + ']';
+				gap = mind;
+				return v;
+			}
+			for (k in value) {
+				if (Object.prototype.hasOwnProperty.call(value, k)) {
+					v = str(k, value);
+					if (v) { partial.push(quote(k) + (gap ? ': ' : ':') + v); }
+				}
+			}
+			v = partial.length === 0 ? '{}' : gap ? '{ ' + gap + partial.join(', ' + gap) + ' ' + mind + '}' : '{' + partial.join(',') + '}';
+			// v = partial.length === 0 ? '{}' : gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' : '{' + partial.join(',') + '}';
+			gap = mind;
+			return v;
+		}
+	}	
+	if (typeof iJSON.stringify !== 'function') {
+		escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+		meta = { '\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"' : '\\"', '\\': '\\\\' };
+		iJSON.stringify = function (value) { gap = ''; indent = ''; return str('', {'': value}); };
+	}
+	if (typeof iJSON.parse !== 'function') {
+		cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+		iJSON.parse = function (text, reviver) {
+			var j;
+			function walk(holder, key) {
+				var k, v, value = holder[key];
+				if (value && typeof value === 'object') {
+					for (k in value) {
+						if (Object.prototype.hasOwnProperty.call(value, k)) {
+							v = walk(value, k);
+							if (v !== undefined) {
+								value[k] = v;
+							} else {
+								delete value[k];
+							}
+						}
+					}
+				}
+				return reviver.call(holder, key, value);
+			}
+			text = String(text);
+			cx.lastIndex = 0;
+			if (cx.test(text)) {
+				text = text.replace(cx, function (a) {
+					return '\\u' +
+						('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+				});
+			}
+			if (/^[\],:{}\s]*$/
+					.test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@')
+						.replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']')
+						.replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
+				j = eval('(' + text + ')');
+				return typeof reviver === 'function'
+					? walk({'': j}, '')
+					: j;
+			}
+			throw new SyntaxError('JSON.parse');
+		};
+	}
+}());	
