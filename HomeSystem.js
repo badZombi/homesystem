@@ -238,7 +238,7 @@ function JobTimerCallback(){
 			}
 				
 		}
-		
+
 	} else {
 		BZHJ.stopTimer();
 	}
@@ -246,7 +246,7 @@ function JobTimerCallback(){
 }
 
 /**
- * Created by DreTaX on 2014.04.18.. V1.9.3
+ * Created by DreTaX on 2014.04.18.. V2.0.1
  * 
  */
 
